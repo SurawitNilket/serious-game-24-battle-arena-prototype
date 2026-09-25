@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>24 Battle Arena - Prototype</title>
+    <!-- Orbitron Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="app-container" class="app-container">
+        <!-- MODE SELECTION MENU -->
+        <section id="menu-screen" class="screen active">
+            <div class="menu-content">
+                <div class="game-logo">
+                    <h1 class="logo-title">24 BATTLE ARENA</h1>
+                    <p class="logo-subtitle">EQUATION BATTLE • TARGET 24</p>
+                </div>
+                
+                <div class="menu-options">
+                    <button id="btn-singleplayer" class="cyber-btn primary">
+                        <span class="btn-glow"></span>
+                        <span class="btn-text">SINGLEPLAYER</span>
+                    </button>
+                    <button id="btn-multiplayer" class="cyber-btn secondary">
+                        <span class="btn-glow"></span>
+                        <span class="btn-text">LOCAL MULTIPLAYER</span>
+                    </button>
+                </div>
+                
+                <div class="menu-footer">
+                    <span class="badge">GAMEPLAY PROTOTYPE</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- GAME ARENA SCREEN (used for both Singleplayer & Local Multiplayer) -->
+        <section id="game-screen" class="screen hidden">
+            <!-- Top Player Zone (Player 2 / Bot) -->
+            <div id="player2-zone" class="player-zone p2-zone">
+                <!-- Injected via JavaScript (Components) -->
+            </div>
+
+            <!-- Center Shared Battle Area / HUD -->
+            <div id="battle-hud" class="battle-hud">
+                <!-- Injected via JavaScript (Components) -->
+            </div>
+
+            <!-- Bottom Player Zone (Player 1) -->
+            <div id="player1-zone" class="player-zone p1-zone">
+                <!-- Injected via JavaScript (Components) -->
+            </div>
+        </section>
+
+        <!-- GAME OVER MODAL -->
+        <div id="game-over-modal" class="modal hidden">
+            <div class="modal-overlay"></div>
+            <div class="modal-content cyber-box">
+                <h2 id="winner-title" class="winner-title">VICTORY!</h2>
+                <p id="winner-desc" class="winner-desc">Player 1 defeated the opponent!</p>
+                <div class="modal-actions">
+                    <button id="btn-rematch" class="cyber-btn primary">PLAY AGAIN</button>
+                    <button id="btn-main-menu" class="cyber-btn secondary">MAIN MENU</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Scripts -->
+    <script src="js/components.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   24 BATTLE ARENA - GAME ENGINE & LOGIC
+   24 BATTLE ARENA - GAME ENGINE & LOGIC (ENHANCED BOT 24 SOLVER)
    ========================================================================== */
 
 class GameEngine {
@@ -17,10 +17,17 @@ class GameEngine {
             'p2'
         );
 
-        // Timer interval handles
         this.tickInterval = null;
         this.botAiTimer = 0;
+        this.botNextActionDelay = this.getRandomBotDelay(); // 2.0 to 6.0 seconds
         this.onStateChangeCallback = null;
+    }
+
+    /**
+     * Get random Bot action delay between 2 and 6 seconds
+     */
+    getRandomBotDelay() {
+        return 2.0 + Math.random() * 4.0;
     }
 
     /**
@@ -55,17 +62,16 @@ class GameEngine {
     }
 
     /**
-     * Generate a new random card (1-10) with 20% powerup chance
+     * Generate a new random card (1-9) with 30% powerup chance (val: 10)
      */
     generateRandomCard() {
         const value = Math.floor(Math.random() * 9) + 1; // 1 to 9
         let powerup = null;
 
-        // 20% chance for powerup
-        if (Math.random() < 0.20) {
+        if (Math.random() < 0.30) {
             const types = ['ATK', 'HP', 'DEF'];
             const type = types[Math.floor(Math.random() * types.length)];
-            powerup = { type, value: 5 };
+            powerup = { type, value: 10 };
         }
 
         return {
@@ -82,7 +88,6 @@ class GameEngine {
     start(onStateChange) {
         this.onStateChangeCallback = onStateChange;
 
-        // Main game tick loop (runs every 100ms)
         this.tickInterval = setInterval(() => {
             this.gameTick(0.1);
         }, 100);
@@ -101,14 +106,13 @@ class GameEngine {
     }
 
     /**
-     * Game loop tick (updates timers, shield durations, and Bot AI)
+     * Game loop tick
      */
     gameTick(dt) {
         if (this.isGameOver) return;
 
         let stateChanged = false;
 
-        // Update regeneration timers & shields for both players
         [this.p1, this.p2].forEach(player => {
             // Update shield
             if (player.shieldDuration > 0) {
@@ -123,18 +127,18 @@ class GameEngine {
                     stateChanged = true;
 
                     if (card.regenTimeLeft <= 0) {
-                        // Regeneration finished! Generate new card
                         player.cards[index] = this.generateRandomCard();
                     }
                 }
             });
         });
 
-        // Singleplayer Bot AI update (every 4.5 seconds)
+        // Singleplayer Bot AI tick (rolls random delay between 2 and 6 seconds)
         if (this.mode === 'singleplayer' && !this.p2.isEvaluating) {
             this.botAiTimer += dt;
-            if (this.botAiTimer >= 4.5) {
+            if (this.botAiTimer >= this.botNextActionDelay) {
                 this.botAiTimer = 0;
+                this.botNextActionDelay = this.getRandomBotDelay();
                 this.executeBotTurn();
                 stateChanged = true;
             }
@@ -146,7 +150,7 @@ class GameEngine {
     }
 
     /**
-     * Handle Card Selection by Player
+     * Handle Card Selection
      */
     selectCard(playerKey, cardIndex) {
         if (this.isGameOver) return;
@@ -156,7 +160,6 @@ class GameEngine {
         const card = player.cards[cardIndex];
         if (!card || card.isRegenerating) return;
 
-        // IF SWAP IS ACTIVE: Discard selected card
         if (player.isSwapActive) {
             player.isSwapActive = false;
             this.triggerCardRegen(player, cardIndex);
@@ -167,9 +170,8 @@ class GameEngine {
 
         const eq = player.equationState;
 
-        // If num1 is not selected yet, or if player clicks another card before choosing operator
         if (eq.num1 === null || eq.operator === null) {
-            eq.num1 = card.value;
+            eq.num1 = Number(card.value);
             eq.num1CardIndex = cardIndex;
             eq.operator = null;
             eq.operatorDisplay = null;
@@ -180,18 +182,15 @@ class GameEngine {
             return;
         }
 
-        // If num1 & operator are set, set num2 (cannot be same card index)
         if (eq.num1 !== null && eq.operator !== null && eq.num2 === null) {
             if (eq.num1CardIndex === cardIndex) {
-                // Clicked same card again: deselect
                 this.clearEquation(playerKey);
                 return;
             }
 
-            eq.num2 = card.value;
+            eq.num2 = Number(card.value);
             eq.num2CardIndex = cardIndex;
 
-            // Evaluate equation!
             this.evaluateEquation(playerKey);
         }
     }
@@ -205,8 +204,6 @@ class GameEngine {
         if (!player || player.isEvaluating) return;
 
         const eq = player.equationState;
-
-        // Must have num1 selected first
         if (eq.num1 === null) return;
 
         const symbols = { '+': '+', '-': '-', '*': 'x', '/': '÷' };
@@ -259,8 +256,8 @@ class GameEngine {
         const eq = player.equationState;
 
         let res = null;
-        const n1 = eq.num1;
-        const n2 = eq.num2;
+        const n1 = Number(eq.num1);
+        const n2 = Number(eq.num2);
 
         switch (eq.operator) {
             case '+': res = n1 + n2; break;
@@ -275,17 +272,12 @@ class GameEngine {
                 break;
         }
 
-        if (res === 'ERR' || isNaN(res)) {
-            // Invalid operation! Clear after quick flash
+        // NON-INTEGER DECIMALS DISCARD:
+        if (res === 'ERR' || isNaN(res) || !Number.isInteger(res)) {
             eq.result = 'ERR';
             this.notifyStateChange();
             setTimeout(() => this.clearEquation(playerKey), 600);
             return;
-        }
-
-        // Format result cleanly (up to 2 decimal places if not integer)
-        if (!Number.isInteger(res)) {
-            res = parseFloat(res.toFixed(2));
         }
 
         eq.result = res;
@@ -295,20 +287,23 @@ class GameEngine {
 
         this.notifyStateChange();
 
-        // 0.5 Second Delay so player can see computed result
+        // 0.5 Second Delay for display
         setTimeout(() => {
             if (this.isGameOver) return;
 
             const cardA = player.cards[eq.num1CardIndex];
             const cardB = player.cards[eq.num2CardIndex];
 
-            // Powerup Combination Rule
+            const usedPowerups = [];
+            if (cardA && cardA.powerup) usedPowerups.push(cardA.powerup);
+            if (cardB && cardB.powerup) usedPowerups.push(cardB.powerup);
+
             const mergedPowerup = this.combinePowerups(
                 cardA ? cardA.powerup : null,
                 cardB ? cardB.powerup : null
             );
 
-            // Replace Card 1 with computed result
+            // Replace Card 1 with result
             player.cards[eq.num1CardIndex] = {
                 value: res,
                 powerup: mergedPowerup,
@@ -321,10 +316,9 @@ class GameEngine {
 
             // IF RESULT IS 24: Trigger Attack Event!
             if (is24) {
-                this.executeAttackEvent(playerKey, eq.num1CardIndex);
+                this.executeAttackEvent(playerKey, eq.num1CardIndex, usedPowerups);
             }
 
-            // Clear equation display & unlock evaluation
             player.isEvaluating = false;
             this.clearEquation(playerKey);
             this.notifyStateChange();
@@ -332,14 +326,14 @@ class GameEngine {
     }
 
     /**
-     * Powerup Merging Logic
+     * Powerup Merging Logic (Max Value: 30 for ATK, HP, DEF)
      */
     combinePowerups(p1, p2) {
-        if (!p1 || !p2) return null; // If 1 card has no powerup, powerup disappears!
-        if (p1.type !== p2.type) return null; // Different types: powerup disappears!
+        if (!p1 || !p2) return null;
+        if (p1.type !== p2.type) return null;
 
-        const maxValues = { ATK: 25, HP: 25, DEF: 10 };
-        const maxVal = maxValues[p1.type] || 25;
+        const maxValues = { ATK: 30, HP: 30, DEF: 30 };
+        const maxVal = maxValues[p1.type] || 30;
         const combinedVal = Math.min(p1.value + p2.value, maxVal);
 
         return {
@@ -351,68 +345,70 @@ class GameEngine {
     /**
      * Trigger Attack Event when 24 is formed!
      */
-    executeAttackEvent(attackerKey, cardIndex) {
+    executeAttackEvent(attackerKey, cardIndex, usedPowerups = []) {
         const attacker = this[attackerKey];
         const defenderKey = attackerKey === 'p1' ? 'p2' : 'p1';
         const defender = this[defenderKey];
-
-        const card24 = attacker.cards[cardIndex];
-        const powerup = card24 ? card24.powerup : null;
 
         let baseDamage = 10;
         let bonusAtk = 0;
         let healAmount = 0;
         let shieldSeconds = 0;
 
-        if (powerup) {
-            if (powerup.type === 'ATK') bonusAtk = powerup.value;
-            if (powerup.type === 'HP') healAmount = powerup.value;
-            if (powerup.type === 'DEF') shieldSeconds = powerup.value;
-        }
+        usedPowerups.forEach(p => {
+            if (p.type === 'ATK') bonusAtk += p.value;
+            if (p.type === 'HP') healAmount += p.value;
+            if (p.type === 'DEF') shieldSeconds += p.value;
+        });
 
-        const totalDamage = baseDamage + bonusAtk;
+        const rawDamage = baseDamage + bonusAtk;
 
-        // Apply Heal to Attacker
+        // Apply Heal
         if (healAmount > 0) {
             attacker.hp = Math.min(attacker.maxHp, attacker.hp + healAmount);
             if (Components.showDamageFeedback) {
-                Components.showDamageFeedback(`+${healAmount} HP HEAL!`, 'heal');
+                Components.showDamageFeedback(`⚡ 24 ATTACK! +${healAmount} HP HEAL!`, 'heal');
             }
         }
 
-        // Apply Defense Shield to Attacker
+        // Apply Shield to Attacker
         if (shieldSeconds > 0) {
-            attacker.shieldDuration = shieldSeconds;
+            attacker.shieldDuration = Math.min(15, attacker.shieldDuration + shieldSeconds);
             if (Components.showDamageFeedback) {
-                Components.showDamageFeedback(`+${shieldSeconds}s SHIELD!`, 'blocked');
+                Components.showDamageFeedback(`⚡ 24 ATTACK! +${shieldSeconds}s SHIELD!`, 'blocked');
             }
         }
 
-        // Apply Damage to Defender
+        // Apply Damage to Defender (With DEF 50% Damage Reduction!)
+        let finalDamage = rawDamage;
+        let isShieldReduced = false;
+
         if (defender.shieldDuration > 0) {
-            // Blocked by defender shield!
-            if (Components.showDamageFeedback) {
-                Components.showDamageFeedback('ATTACK BLOCKED!', 'blocked');
-            }
-        } else {
-            defender.hp = Math.max(0, defender.hp - totalDamage);
-            if (Components.showDamageFeedback) {
-                Components.showDamageFeedback(`-${totalDamage} HP!`, 'damage');
-            }
+            finalDamage = Math.ceil(rawDamage * 0.5);
+            isShieldReduced = true;
+        }
 
-            // Check Win Condition
-            if (defender.hp <= 0) {
-                this.isGameOver = true;
-                this.winner = attacker.name;
+        defender.hp = Math.max(0, defender.hp - finalDamage);
+
+        if (Components.showDamageFeedback && healAmount === 0 && shieldSeconds === 0) {
+            if (isShieldReduced) {
+                Components.showDamageFeedback(`⚡ 24 ATTACK! -${finalDamage} HP (50% SHIELD REDUCTION!)`, 'damage');
+            } else {
+                Components.showDamageFeedback(`⚡ 24 ATTACK! -${finalDamage} HP!`, 'damage');
             }
         }
 
-        // Card 24 was consumed in attack: set it to regenerate in 2.5s
+        if (defender.hp <= 0) {
+            this.isGameOver = true;
+            this.winner = attacker.name;
+        }
+
+        // Card 24 dissolves into 2.5s regeneration
         this.triggerCardRegen(attacker, cardIndex);
     }
 
     /**
-     * Put a card slot into 2.5s regeneration timer
+     * Put card slot into 2.5s regeneration
      */
     triggerCardRegen(player, cardIndex) {
         player.cards[cardIndex] = {
@@ -424,42 +420,38 @@ class GameEngine {
     }
 
     /**
-     * BOT AI Logic (Singleplayer Mode)
-     * Every 4.5s rolls:
-     * 1. Create random result (50%)
-     * 2. Create 24 if possible (25%)
-     * 3. Discard bad card (25%)
+     * BOT AI Logic Execution
      */
     executeBotTurn() {
         const bot = this.p2;
         if (bot.isEvaluating) return;
 
-        // Get available non-regenerating card indices
         const validIndices = [];
         bot.cards.forEach((c, idx) => {
-            if (c && !c.isRegenerating) validIndices.push(idx);
+            if (c && !c.isRegenerating && c.value !== null && c.value !== undefined) {
+                validIndices.push(idx);
+            }
         });
 
-        if (validIndices.length < 2) return; // Need at least 2 cards to combine
+        if (validIndices.length < 2) return;
 
-        const roll = Math.random();
-
-        // Option 2: Try to create 24 (25% chance)
-        if (roll >= 0.50 && roll < 0.75) {
-            const foundPair = this.findPairFor24(bot.cards, validIndices);
-            if (foundPair) {
-                this.executeBotEquation(foundPair.i1, foundPair.op, foundPair.i2);
-                return;
-            }
+        // 1. COMPREHENSIVE 24 SOLVER: RUN ALL 1-STEP, 2-STEP, AND 3-STEP COMBINATIONS
+        const move24 = this.findBotBestMove(bot.cards, validIndices);
+        if (move24) {
+            this.executeBotEquation(move24.i1, move24.op, move24.i2);
+            return;
         }
 
-        // Option 3: Discard bad card (25% chance)
-        if (roll >= 0.75) {
-            // Find card > 24 or highest card
+        // 2. IF NO WAY TO MAKE 24:
+        // 30% DISCARD vs 70% RANDOM CALCULATION
+        const roll = Math.random();
+
+        if (roll < 0.30) {
+            // DISCARD (30% CHANCE)
             let badIdx = validIndices[0];
             let maxVal = -Infinity;
             validIndices.forEach(idx => {
-                const val = bot.cards[idx].value;
+                const val = Number(bot.cards[idx].value);
                 if (val > maxVal) {
                     maxVal = val;
                     badIdx = idx;
@@ -467,32 +459,66 @@ class GameEngine {
             });
             this.triggerCardRegen(bot, badIdx);
             return;
-        }
+        } else {
+            // MAKE RANDOM RESULT (70% CHANCE)
+            for (let attempt = 0; attempt < 10; attempt++) {
+                const i1 = validIndices[Math.floor(Math.random() * validIndices.length)];
+                let i2 = validIndices[Math.floor(Math.random() * validIndices.length)];
+                while (i1 === i2 && validIndices.length > 1) {
+                    i2 = validIndices[Math.floor(Math.random() * validIndices.length)];
+                }
+                const ops = ['+', '-', '*', '/'];
+                const op = ops[Math.floor(Math.random() * ops.length)];
+                
+                const v1 = Number(bot.cards[i1].value);
+                const v2 = Number(bot.cards[i2].value);
+                let res = null;
+                if (op === '+') res = v1 + v2;
+                if (op === '-') res = v1 - v2;
+                if (op === '*') res = v1 * v2;
+                if (op === '/' && v2 !== 0) res = v1 / v2;
 
-        // Option 1: Create random result (50% chance or fallback)
-        const i1 = validIndices[Math.floor(Math.random() * validIndices.length)];
-        let i2 = validIndices[Math.floor(Math.random() * validIndices.length)];
-        while (i1 === i2 && validIndices.length > 1) {
-            i2 = validIndices[Math.floor(Math.random() * validIndices.length)];
-        }
-        const ops = ['+', '-', '*', '/'];
-        const op = ops[Math.floor(Math.random() * ops.length)];
+                if (res !== null && Number.isInteger(res) && res > 0 && res <= 48) {
+                    this.executeBotEquation(i1, op, i2);
+                    return;
+                }
+            }
 
-        this.executeBotEquation(i1, op, i2);
+            // Fallback: Discard largest card
+            let badIdx = validIndices[0];
+            let maxVal = -Infinity;
+            validIndices.forEach(idx => {
+                const val = Number(bot.cards[idx].value);
+                if (val > maxVal) {
+                    maxVal = val;
+                    badIdx = idx;
+                }
+            });
+            this.triggerCardRegen(bot, badIdx);
+        }
     }
 
     /**
-     * Find if any 2 available bot cards can form 24
+     * Smart 24 Solver for Bot:
+     * Recursively evaluates 1-step, 2-step, and 3-step calculation trees across all holding cards.
+     * Returns the exact step { i1, op, i2 } to execute toward 24, or null if 24 is impossible.
      */
-    findPairFor24(cards, validIndices) {
+    findBotBestMove(cards, validIndices) {
+        if (validIndices.length < 2) return null;
+
+        const availableNumbers = validIndices.map(idx => ({
+            index: idx,
+            value: Number(cards[idx].value)
+        }));
+
         const ops = ['+', '-', '*', '/'];
-        for (let i = 0; i < validIndices.length; i++) {
-            for (let j = 0; j < validIndices.length; j++) {
+
+        // 1. Direct 1-step 24 check (highest priority!)
+        for (let i = 0; i < availableNumbers.length; i++) {
+            for (let j = 0; j < availableNumbers.length; j++) {
                 if (i === j) continue;
-                const idx1 = validIndices[i];
-                const idx2 = validIndices[j];
-                const v1 = cards[idx1].value;
-                const v2 = cards[idx2].value;
+                const v1 = availableNumbers[i].value;
+                const v2 = availableNumbers[j].value;
 
                 for (let op of ops) {
                     let res = null;
@@ -502,25 +528,98 @@ class GameEngine {
                     if (op === '/' && v2 !== 0) res = v1 / v2;
 
                     if (res === 24) {
-                        return { i1: idx1, op, i2: idx2 };
+                        return { 
+                            i1: availableNumbers[i].index, 
+                            op, 
+                            i2: availableNumbers[j].index 
+                        };
                     }
                 }
             }
         }
+
+        // 2. Multi-step recursive search to see if any 2-step or 3-step sequence leads to 24
+        function searchTree(nums) {
+            if (nums.length <= 1) return false;
+
+            for (let i = 0; i < nums.length; i++) {
+                for (let j = 0; j < nums.length; j++) {
+                    if (i === j) continue;
+                    const a = nums[i].value;
+                    const b = nums[j].value;
+
+                    for (let op of ops) {
+                        let res = null;
+                        if (op === '+') res = a + b;
+                        if (op === '-') res = a - b;
+                        if (op === '*') res = a * b;
+                        if (op === '/' && b !== 0) res = a / b;
+
+                        if (res === null || !Number.isInteger(res) || res < -50 || res > 100) continue;
+
+                        if (nums.length === 2 && res === 24) {
+                            return true;
+                        }
+
+                        const nextNums = [];
+                        for (let k = 0; k < nums.length; k++) {
+                            if (k !== i && k !== j) nextNums.push(nums[k]);
+                        }
+                        nextNums.push({ index: nums[i].index, value: res });
+
+                        if (nums.length > 2 && searchTree(nextNums)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        // Test every initial pair to see if it leads to 24 down the decision tree
+        for (let i = 0; i < availableNumbers.length; i++) {
+            for (let j = 0; j < availableNumbers.length; j++) {
+                if (i === j) continue;
+                const v1 = availableNumbers[i].value;
+                const v2 = availableNumbers[j].value;
+
+                for (let op of ops) {
+                    let res = null;
+                    if (op === '+') res = v1 + v2;
+                    if (op === '-') res = v1 - v2;
+                    if (op === '*') res = v1 * v2;
+                    if (op === '/' && v2 !== 0) res = v1 / v2;
+
+                    if (res === null || !Number.isInteger(res) || res < -50 || res > 100) continue;
+
+                    const nextNums = [];
+                    for (let k = 0; k < availableNumbers.length; k++) {
+                        if (k !== i && k !== j) nextNums.push(availableNumbers[k]);
+                    }
+                    nextNums.push({ index: availableNumbers[i].index, value: res });
+
+                    if (searchTree(nextNums)) {
+                        return {
+                            i1: availableNumbers[i].index,
+                            op,
+                            i2: availableNumbers[j].index
+                        };
+                    }
+                }
+            }
+        }
+
         return null;
     }
 
-    /**
-     * Helper to execute bot equation visually
-     */
     executeBotEquation(idx1, opKey, idx2) {
         const bot = this.p2;
-        bot.equationState.num1 = bot.cards[idx1].value;
+        bot.equationState.num1 = Number(bot.cards[idx1].value);
         bot.equationState.num1CardIndex = idx1;
         bot.equationState.operator = opKey;
         const symbols = { '+': '+', '-': '-', '*': 'x', '/': '÷' };
         bot.equationState.operatorDisplay = symbols[opKey] || opKey;
-        bot.equationState.num2 = bot.cards[idx2].value;
+        bot.equationState.num2 = Number(bot.cards[idx2].value);
         bot.equationState.num2CardIndex = idx2;
 
         this.evaluateEquation('p2');

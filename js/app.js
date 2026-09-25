@@ -1,5 +1,5 @@
 /* ==========================================================================
-   24 BATTLE ARENA - MAIN APP CONTROLLER
+   24 BATTLE ARENA - MAIN APP CONTROLLER (UPDATED & FIXED)
    ========================================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -22,16 +22,36 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentGameEngine = null;
     let currentMode = 'singleplayer';
 
+    // GUARANTEE GAME OVER MODAL IS HIDDEN AT BROWSER START
+    hideGameOverModal();
+
+    function hideGameOverModal() {
+        if (gameOverModal) {
+            gameOverModal.classList.add('hidden');
+            gameOverModal.style.display = 'none';
+        }
+    }
+
+    function showGameOverModal(winnerName) {
+        if (gameOverModal) {
+            winnerTitle.textContent = 'VICTORY!';
+            winnerDesc.textContent = `${winnerName} HAS WON THE BATTLE!`;
+            gameOverModal.classList.remove('hidden');
+            gameOverModal.style.display = 'flex';
+        }
+    }
+
     /**
      * Start Game in specified mode ('singleplayer' | 'multiplayer')
      */
     function startGame(mode) {
         currentMode = mode;
 
-        // Hide Menu & Modal, Show Game Arena
+        // Hide Menu & Game Over Modal, Show Game Arena
         menuScreen.classList.remove('active');
         menuScreen.classList.add('hidden');
-        gameOverModal.classList.add('hidden');
+        hideGameOverModal();
+
         gameScreen.classList.remove('hidden');
         gameScreen.classList.add('active');
 
@@ -67,7 +87,6 @@ document.addEventListener('DOMContentLoaded', () => {
             {
                 isRotated: false,
                 isInteractive: true,
-                showStatusInPanel: false,
                 customHint: 'CREATE 24 TO ATTACK OPPONENT !'
             }
         );
@@ -85,31 +104,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 onClearEquation: () => engine.clearEquation('p2')
             },
             {
-                isRotated: isMultiplayer, // Rotated 180deg in Local Multiplayer!
-                isInteractive: isMultiplayer, // Non-interactable in Singleplayer Bot mode
-                showStatusInPanel: !isMultiplayer, // In Singleplayer, P2 status shows inside top panel
+                isRotated: isMultiplayer, // 180-degree rotation in Local Multiplayer
+                isInteractive: isMultiplayer, // Hide operators & disable controls for Bot in Singleplayer
                 customHint: isMultiplayer ? 'CREATE 24 TO ATTACK OPPONENT !' : 'BOT OPPONENT'
             }
         );
 
-        // Render Center Battle HUD
+        // Render Center Shared Battle HUD
         Components.renderBattleHUD(battleHud, engine, () => {
             returnToMenu();
         });
 
         // Check Game Over State
         if (engine.isGameOver) {
-            showGameOver(engine.winner);
+            showGameOverModal(engine.winner);
         }
-    }
-
-    /**
-     * Show Game Over Modal
-     */
-    function showGameOver(winnerName) {
-        winnerTitle.textContent = 'VICTORY!';
-        winnerDesc.textContent = `${winnerName} HAS WON THE BATTLE!`;
-        gameOverModal.classList.remove('hidden');
     }
 
     /**
@@ -123,7 +132,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         gameScreen.classList.remove('active');
         gameScreen.classList.add('hidden');
-        gameOverModal.classList.add('hidden');
+        hideGameOverModal();
+
         menuScreen.classList.remove('hidden');
         menuScreen.classList.add('active');
     }

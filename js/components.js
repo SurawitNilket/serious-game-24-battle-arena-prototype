@@ -1,5 +1,5 @@
 /* ==========================================================================
-   24 BATTLE ARENA - REUSABLE UI COMPONENTS
+   24 BATTLE ARENA - REUSABLE UI COMPONENTS (SINGLEPLAYER VISUAL FIX)
    ========================================================================== */
 
 const Components = {
@@ -23,13 +23,11 @@ const Components = {
             cardEl.classList.add('selected');
         }
 
-        // Card number value
         const valEl = document.createElement('span');
         valEl.className = 'card-value';
         valEl.textContent = card.value;
         cardEl.appendChild(valEl);
 
-        // Powerup badge if present
         if (card.powerup && card.powerup.value > 0) {
             const badgeEl = document.createElement('span');
             const type = card.powerup.type.toLowerCase();
@@ -38,9 +36,7 @@ const Components = {
             cardEl.appendChild(badgeEl);
         }
 
-        // Attach touch/pointer responsive event listener
         this.attachFastTapListener(cardEl, () => onClick(cardIndex));
-
         return cardEl;
     },
 
@@ -58,7 +54,7 @@ const Components = {
     },
 
     /**
-     * Create Equation Display element: [num1] [op] [num2] = [result]
+     * Create Equation Display element: [num1] [operator box] [num2] = [result]
      */
     createEquationDisplay(eqState, playerKey) {
         const container = document.createElement('div');
@@ -69,10 +65,10 @@ const Components = {
         box1.className = `eq-box ${eqState.num1 !== null ? 'active' : ''}`;
         box1.textContent = eqState.num1 !== null ? eqState.num1 : '';
 
-        // Operator
-        const opSign = document.createElement('div');
-        opSign.className = 'eq-operator-sign';
-        opSign.textContent = eqState.operatorDisplay || '';
+        // Operator Box (Small Box matching number boxes)
+        const opBox = document.createElement('div');
+        opBox.className = `eq-box operator-box ${eqState.operator ? 'active' : ''}`;
+        opBox.textContent = eqState.operatorDisplay || '';
 
         // Slot 2 (Num 2)
         const box2 = document.createElement('div');
@@ -87,13 +83,15 @@ const Components = {
         // Result Slot
         const boxRes = document.createElement('div');
         boxRes.className = `eq-box result-box ${eqState.result !== null ? 'active' : ''}`;
-        if (eqState.isSuccess24) {
+        if (eqState.result === 'ERR') {
+            boxRes.classList.add('err-box');
+        } else if (eqState.isSuccess24) {
             boxRes.classList.add('success-24');
         }
         boxRes.textContent = eqState.result !== null ? eqState.result : '';
 
         container.appendChild(box1);
-        container.appendChild(opSign);
+        container.appendChild(opBox);
         container.appendChild(box2);
         container.appendChild(eqSign);
         container.appendChild(boxRes);
@@ -124,12 +122,14 @@ const Components = {
     },
 
     /**
-     * Create Player Status Component (Name, HP Bar, Shield)
+     * Create Player Status Component
+     * Note: Flipped label below HP bar is rendered ONLY in Local Multiplayer mode!
      */
-    createPlayerStatus(playerData, playerKey, isOpponentHint = false) {
+    createPlayerStatus(playerData, playerKey, isMultiplayer = false) {
         const container = document.createElement('div');
         container.className = `player-status-bar ${playerKey === 'p1' ? 'p1-status' : 'p2-status'}`;
 
+        // Normal Header (Facing Player 1 / viewer)
         const header = document.createElement('div');
         header.className = 'status-header';
 
@@ -158,10 +158,28 @@ const Components = {
         hpFill.className = 'hp-bar-fill';
         const percent = Math.max(0, (playerData.hp / playerData.maxHp) * 100);
         hpFill.style.width = `${percent}%`;
-
         hpContainer.appendChild(hpFill);
+
         container.appendChild(header);
         container.appendChild(hpContainer);
+
+        // Render Flipped Footer ONLY in Local Multiplayer mode!
+        if (isMultiplayer) {
+            const footerFlipped = document.createElement('div');
+            footerFlipped.className = 'status-footer-flipped';
+
+            const nameFlipped = document.createElement('span');
+            nameFlipped.className = 'player-name';
+            nameFlipped.textContent = playerData.name.toUpperCase();
+
+            const hpFlipped = document.createElement('span');
+            hpFlipped.className = 'hp-text';
+            hpFlipped.textContent = `${Math.max(0, Math.ceil(playerData.hp))}/${playerData.maxHp}`;
+
+            footerFlipped.appendChild(nameFlipped);
+            footerFlipped.appendChild(hpFlipped);
+            container.appendChild(footerFlipped);
+        }
 
         return container;
     },
@@ -179,12 +197,6 @@ const Components = {
 
         const isInteractive = options.isInteractive !== false;
 
-        // If Singleplayer opponent, show status in panel as per reference screenshot Singleplayer.png
-        if (options.showStatusInPanel) {
-            const statusEl = this.createPlayerStatus(playerState, playerKey, true);
-            container.appendChild(statusEl);
-        }
-
         // Action Hint Text
         const hintEl = document.createElement('div');
         hintEl.className = 'action-hint';
@@ -195,25 +207,26 @@ const Components = {
         const eqEl = this.createEquationDisplay(playerState.equationState, playerKey);
         container.appendChild(eqEl);
 
-        // Operators Row
-        const opsRow = document.createElement('div');
-        opsRow.className = 'operators-row';
-        const operators = [
-            { key: '+', symbol: '+' },
-            { key: '-', symbol: '-' },
-            { key: '*', symbol: 'x' },
-            { key: '/', symbol: '÷' }
-        ];
-        operators.forEach(op => {
-            const isSelected = playerState.equationState.operator === op.key;
-            const opBtn = this.createOperatorButton(
-                op.symbol, op.key, playerKey, isSelected, 
-                isInteractive ? handlers.onSelectOperator : () => {}
-            );
-            if (!isInteractive) opBtn.style.opacity = '0.6';
-            opsRow.appendChild(opBtn);
-        });
-        container.appendChild(opsRow);
+        // Operators Row (Render ONLY if interactive / for human player)
+        if (isInteractive) {
+            const opsRow = document.createElement('div');
+            opsRow.className = 'operators-row';
+            const operators = [
+                { key: '+', symbol: '+' },
+                { key: '-', symbol: '-' },
+                { key: '*', symbol: 'x' },
+                { key: '/', symbol: '÷' }
+            ];
+            operators.forEach(op => {
+                const isSelected = playerState.equationState.operator === op.key;
+                const opBtn = this.createOperatorButton(
+                    op.symbol, op.key, playerKey, isSelected, 
+                    handlers.onSelectOperator
+                );
+                opsRow.appendChild(opBtn);
+            });
+            container.appendChild(opsRow);
+        }
 
         // Cards Row
         const cardsRow = document.createElement('div');
@@ -231,7 +244,7 @@ const Components = {
         });
         container.appendChild(cardsRow);
 
-        // Controls Row (SWAP & CLEAR) - in Singleplayer Bot, controls are hidden or disabled
+        // Controls Row (SWAP & CLEAR) - Render only if interactive
         if (isInteractive) {
             const ctrlRow = document.createElement('div');
             ctrlRow.className = 'controls-row';
@@ -239,7 +252,6 @@ const Components = {
             const swapBtn = this.createSwapButton(playerState.isSwapActive, handlers.onToggleSwap);
             const clearBtn = this.createClearButton(handlers.onClearEquation);
 
-            // Match layout in Local Multiplayer screenshot: SWAP on left, CLEAR on right (or vice versa)
             ctrlRow.appendChild(swapBtn);
             ctrlRow.appendChild(clearBtn);
             container.appendChild(ctrlRow);
@@ -258,35 +270,31 @@ const Components = {
         // Back Circle Button
         const backBtn = document.createElement('div');
         backBtn.className = 'btn-back-circle';
-        backBtn.innerHTML = '&#10094;'; // Left angle bracket arrow '<'
+        backBtn.innerHTML = '&#10094;';
         this.attachFastTapListener(backBtn, onBackClick);
         hudContent.appendChild(backBtn);
 
-        // Player Status Bars inside HUD
-        if (gameState.mode === 'multiplayer') {
-            // Local Multiplayer: show status for both Player 2 and Player 1
-            const p2Status = this.createPlayerStatus(gameState.p2, 'p2');
-            const p1Status = this.createPlayerStatus(gameState.p1, 'p1');
-            hudContent.appendChild(p2Status);
-            hudContent.appendChild(p1Status);
-        } else {
-            // Singleplayer: status shown for P1 in HUD, while P2 status is above
-            const p1Status = this.createPlayerStatus(gameState.p1, 'p1');
-            hudContent.appendChild(p1Status);
-        }
+        const isMultiplayer = (gameState.mode === 'multiplayer');
+
+        // Player 2 / Bot Status Bar (Top of HUD)
+        const p2Status = this.createPlayerStatus(gameState.p2, 'p2', isMultiplayer);
+        hudContent.appendChild(p2Status);
+
+        // Dedicated Center HUD Attack Message Zone
+        const msgZone = document.createElement('div');
+        msgZone.id = 'hud-message-zone';
+        msgZone.className = 'hud-message-zone';
+        hudContent.appendChild(msgZone);
+
+        // Player 1 Status Bar (Bottom of HUD)
+        const p1Status = this.createPlayerStatus(gameState.p1, 'p1', isMultiplayer);
+        hudContent.appendChild(p1Status);
 
         container.appendChild(hudContent);
-
-        // Floating Damage Feedback Overlay Zone
-        const feedbackZone = document.createElement('div');
-        feedbackZone.id = 'attack-feedback-zone';
-        feedbackZone.className = 'attack-feedback-zone';
-        container.appendChild(feedbackZone);
     },
 
     /**
      * Helper to attach fast, multi-touch responsive tap listener
-     * Prevents multi-touch delay and accidental zoom/scroll on touchscreens.
      */
     attachFastTapListener(element, callback) {
         let touched = false;
@@ -307,20 +315,22 @@ const Components = {
     },
 
     /**
-     * Trigger floating damage/attack visual feedback
+     * Trigger center HUD attack/heal/shield message banner
      */
     showDamageFeedback(text, type = 'damage') {
-        const feedbackZone = document.getElementById('attack-feedback-zone');
-        if (!feedbackZone) return;
+        const msgZone = document.getElementById('hud-message-zone');
+        if (!msgZone) return;
 
-        const dmgEl = document.createElement('div');
-        dmgEl.className = `floating-dmg-text ${type}`;
-        dmgEl.textContent = text;
-        feedbackZone.appendChild(dmgEl);
+        msgZone.innerHTML = '';
+
+        const banner = document.createElement('div');
+        banner.className = `attack-msg-banner ${type}`;
+        banner.textContent = text;
+        msgZone.appendChild(banner);
 
         setTimeout(() => {
-            if (dmgEl.parentNode) {
-                dmgEl.parentNode.removeChild(dmgEl);
+            if (banner.parentNode) {
+                banner.parentNode.removeChild(banner);
             }
         }, 900);
     }

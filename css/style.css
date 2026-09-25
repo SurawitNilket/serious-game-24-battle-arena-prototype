@@ -1,5 +1,5 @@
 /* ==========================================================================
-   24 BATTLE ARENA - STYLESHEET
+   24 BATTLE ARENA - STYLESHEET (UPDATED HUD & REVAMP)
    Dark Neon Cyberpunk Visual Identity
    ========================================================================== */
 
@@ -50,7 +50,7 @@ body {
     overflow: hidden;
 }
 
-/* App Container (Simulates 9:16 mobile viewport on desktop, full height on mobile) */
+/* App Container */
 .app-container {
     width: 100vw;
     max-width: 480px;
@@ -82,14 +82,16 @@ body {
 }
 
 .screen.hidden {
-    opacity: 0;
-    pointer-events: none;
-    z-index: -1;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    z-index: -1 !important;
+    display: none !important;
 }
 
 .screen.active {
     opacity: 1;
     z-index: 10;
+    display: flex;
 }
 
 /* ==========================================================================
@@ -138,7 +140,6 @@ body {
     width: 100%;
 }
 
-/* Cyberpunk Neon Buttons */
 .cyber-btn {
     position: relative;
     background: rgba(10, 16, 32, 0.8);
@@ -187,7 +188,7 @@ body {
     flex-direction: column;
     justify-content: space-between;
     height: 100%;
-    padding: 0.5rem;
+    padding: 0.3rem;
 }
 
 /* PLAYER ZONES */
@@ -195,17 +196,15 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: space-around;
-    gap: 0.4rem;
-    padding: 0.4rem 0.25rem;
+    gap: 0.25rem;
+    padding: 0.2rem;
     flex: 1;
 }
 
-/* 180-DEGREE ROTATION FOR PLAYER 2 (Local Multiplayer) */
 .player-zone.rotated {
     transform: rotate(180deg);
 }
 
-/* ACTION ANNOUNCEMENT TEXT */
 .action-hint {
     text-align: center;
     font-size: 0.75rem;
@@ -213,7 +212,7 @@ body {
     letter-spacing: 1px;
     color: var(--p1-cyan);
     text-shadow: 0 0 6px var(--p1-cyan-glow);
-    margin-bottom: 0.2rem;
+    margin-bottom: 0.1rem;
 }
 
 .p2-zone .action-hint {
@@ -222,21 +221,19 @@ body {
 }
 
 /* ==========================================================================
-   REUSABLE COMPONENT STYLES
+   EQUATION DISPLAY WITH OPERATOR BOX
    ========================================================================== */
-
-/* 1. EQUATION DISPLAY */
 .equation-display {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
-    margin: 0.2rem 0;
+    gap: 0.35rem;
+    margin: 0.15rem 0;
 }
 
 .eq-box {
-    width: 52px;
-    height: 52px;
+    width: 48px;
+    height: 48px;
     border-radius: 8px;
     background: var(--bg-card);
     border: 2px solid var(--gray-border);
@@ -248,14 +245,19 @@ body {
     color: #fff;
     position: relative;
     box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.6);
-    /* Subtle Grid Pattern */
     background-image: 
         linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
     background-size: 8px 8px;
 }
 
-/* Cyan Theme for P1 Equation Display */
+.eq-box.operator-box {
+    width: 42px;
+    height: 42px;
+    font-size: 1.35rem;
+    font-weight: 900;
+}
+
 .p1-zone .eq-box {
     border-color: var(--p1-cyan);
     box-shadow: 0 0 6px var(--p1-cyan-glow), inset 0 0 8px rgba(0, 240, 255, 0.15);
@@ -265,7 +267,6 @@ body {
     background-size: 8px 8px;
 }
 
-/* Red Theme for P2 Equation Display */
 .p2-zone .eq-box {
     border-color: var(--p2-red);
     box-shadow: 0 0 6px var(--p2-red-glow), inset 0 0 8px rgba(255, 42, 95, 0.15);
@@ -274,15 +275,6 @@ body {
         linear-gradient(90deg, var(--p2-bg-grid) 1px, transparent 1px);
     background-size: 8px 8px;
 }
-
-.eq-operator-sign {
-    font-size: 1.4rem;
-    font-weight: 900;
-    color: #fff;
-}
-
-.p1-zone .eq-operator-sign { color: var(--p1-cyan); }
-.p2-zone .eq-operator-sign { color: var(--p2-red); }
 
 .eq-equals-sign {
     font-size: 1.3rem;
@@ -303,6 +295,19 @@ body {
     box-shadow: 0 0 12px #ffffff;
 }
 
+.eq-box.err-box {
+    border-color: #ff3333 !important;
+    color: #ff3333 !important;
+    box-shadow: 0 0 14px #ff0000 !important;
+    animation: shake-err 0.4s ease;
+}
+
+@keyframes shake-err {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-4px); }
+    40%, 80% { transform: translateX(4px); }
+}
+
 .eq-box.success-24 {
     border-color: #00ff66 !important;
     background-color: rgba(0, 255, 102, 0.2) !important;
@@ -315,8 +320,7 @@ body {
     100% { transform: scale(1.08); }
 }
 
-
-/* 2. OPERATOR BUTTONS */
+/* OPERATOR BUTTONS */
 .operators-row {
     display: flex;
     justify-content: center;
@@ -324,14 +328,14 @@ body {
 }
 
 .operator-btn {
-    width: 54px;
-    height: 50px;
+    width: 52px;
+    height: 46px;
     border-radius: 8px;
     background: var(--bg-card);
     border: 2px solid var(--p1-cyan);
     color: #fff;
     font-family: var(--font-orbitron);
-    font-size: 1.4rem;
+    font-size: 1.35rem;
     font-weight: 700;
     display: flex;
     justify-content: center;
@@ -367,8 +371,7 @@ body {
     box-shadow: 0 0 15px var(--p2-red);
 }
 
-
-/* 3. NUMBER CARDS */
+/* NUMBER CARDS */
 .cards-row {
     display: flex;
     justify-content: center;
@@ -376,8 +379,8 @@ body {
 }
 
 .num-card {
-    width: 66px;
-    height: 92px;
+    width: 64px;
+    height: 86px;
     border-radius: 10px;
     background: var(--bg-card);
     border: 2px solid var(--p1-cyan);
@@ -405,36 +408,26 @@ body {
 }
 
 .card-value {
-    font-size: 1.9rem;
+    font-size: 1.8rem;
     font-weight: 900;
     color: #ffffff;
     text-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
 }
 
-.p1-zone .card-value {
-    color: #ffffff;
-}
-
-.p2-zone .card-value {
-    color: #ffffff;
-}
-
-/* Card Powerup Display Badge */
 .powerup-badge {
-    font-size: 0.62rem;
+    font-size: 0.6rem;
     font-weight: 700;
     letter-spacing: 0.5px;
     color: var(--gold-powerup);
     text-shadow: 0 0 4px var(--gold-powerup);
     position: absolute;
-    bottom: 6px;
+    bottom: 5px;
 }
 
 .powerup-badge.atk { color: #ff5555; text-shadow: 0 0 4px #ff5555; }
 .powerup-badge.hp { color: #00ff66; text-shadow: 0 0 4px #00ff66; }
 .powerup-badge.def { color: #00d2ff; text-shadow: 0 0 4px #00d2ff; }
 
-/* Card Selection & Active States */
 .num-card.selected {
     transform: translateY(-4px) scale(1.05);
     border-color: #ffffff !important;
@@ -445,7 +438,6 @@ body {
     transform: scale(0.95);
 }
 
-/* Card Regenerating Overlay State */
 .num-card.regenerating {
     border-color: var(--gray-muted) !important;
     box-shadow: none !important;
@@ -466,7 +458,7 @@ body {
     100% { opacity: 1; }
 }
 
-/* 4. BOTTOM ACTION BUTTONS (SWAP / CLEAR) */
+/* ACTION BUTTONS (SWAP / CLEAR) */
 .controls-row {
     display: flex;
     justify-content: center;
@@ -476,7 +468,7 @@ body {
 .action-btn {
     flex: 1;
     max-width: 140px;
-    height: 44px;
+    height: 40px;
     border-radius: 8px;
     background: var(--bg-card);
     font-family: var(--font-orbitron);
@@ -495,7 +487,6 @@ body {
     background-size: 8px 8px;
 }
 
-/* Swap Button Style (Red outline like screenshot) */
 .action-btn.swap-btn {
     border: 2px solid var(--p2-red);
     color: var(--p2-red);
@@ -514,7 +505,6 @@ body {
     100% { box-shadow: 0 0 22px var(--p2-red); }
 }
 
-/* Clear Button Style (Gray outline like screenshot) */
 .action-btn.clear-btn {
     border: 2px solid var(--gray-border);
     color: #ccc;
@@ -530,28 +520,28 @@ body {
     color: #fff;
 }
 
-
 /* ==========================================================================
-   CENTER SHARED BATTLE HUD
+   CENTER SHARED BATTLE HUD (EXPANDED FOR LOCAL MULTIPLAYER VISUAL SPACE)
    ========================================================================== */
 .battle-hud {
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    gap: 0.4rem;
-    padding: 0.4rem 0.6rem;
+    justify-content: space-between;
+    padding: 0.6rem 0.6rem;
     background: rgba(4, 7, 18, 0.95);
-    border-top: 1px solid rgba(0, 240, 255, 0.2);
-    border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+    border-top: 1.5px solid rgba(0, 240, 255, 0.3);
+    border-bottom: 1.5px solid rgba(0, 240, 255, 0.3);
     position: relative;
     z-index: 5;
+    min-height: 180px; /* EXPANDED HUD SPACE FOR VISUAL CLASH / ATTACKS */
 }
 
-/* HUD Header: Back button + Statuses */
 .hud-center-content {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    justify-content: space-between;
+    height: 100%;
+    min-height: 168px; /* Move P2 status and P1 status further apart */
     position: relative;
 }
 
@@ -560,13 +550,13 @@ body {
     left: 0;
     top: 50%;
     transform: translateY(-50%);
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     border: 2px solid #fff;
     background: rgba(10, 16, 32, 0.9);
     color: #fff;
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 700;
     display: flex;
     justify-content: center;
@@ -587,18 +577,23 @@ body {
 .player-status-bar {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
-    padding-left: 2.4rem; /* Leave room for back button */
+    gap: 0.1rem;
+    padding-left: 2.2rem;
 }
 
-/* Reverse labels for P2 in multiplayer if needed or symmetric styling */
-.status-header {
+.status-header, .status-footer-flipped {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     font-weight: 700;
     letter-spacing: 1px;
+}
+
+.status-footer-flipped {
+    transform: rotate(180deg);
+    margin-top: 0.1rem;
+    opacity: 0.95;
 }
 
 .p1-status .player-name { color: var(--p1-cyan); text-shadow: 0 0 4px var(--p1-cyan-glow); }
@@ -606,9 +601,9 @@ body {
 
 .hp-bar-container {
     width: 100%;
-    height: 14px;
+    height: 12px;
     background: #1a2234;
-    border-radius: 7px;
+    border-radius: 6px;
     overflow: hidden;
     border: 1px solid var(--gray-border);
     position: relative;
@@ -634,43 +629,48 @@ body {
     margin-left: 0.4rem;
 }
 
-/* FLOATING ATTACK & DAMAGE VISUAL EFFECTS */
-.attack-feedback-zone {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-    z-index: 20;
+/* EXPANDED CENTER HUD ATTACK MESSAGE ZONE */
+.hud-message-zone {
+    height: 50px;
     display: flex;
     justify-content: center;
     align-items: center;
+    margin: 0.4rem 0;
+    position: relative;
+    text-align: center;
 }
 
-.floating-dmg-text {
-    font-size: 1.6rem;
+.attack-msg-banner {
+    font-size: 0.9rem;
     font-weight: 900;
-    color: #ff3333;
-    text-shadow: 0 0 12px #ff0000;
-    animation: float-up-fade 0.9s forwards ease-out;
-    position: absolute;
-    white-space: nowrap;
+    letter-spacing: 1.5px;
+    color: #ffffff;
+    text-shadow: 0 0 10px var(--p1-cyan);
+    animation: pop-msg 0.8s ease-out forwards;
+    white-space: normal;
+    line-height: 1.3;
 }
 
-.floating-dmg-text.heal {
+.attack-msg-banner.damage {
+    color: #ff3355;
+    text-shadow: 0 0 12px #ff0044;
+}
+
+.attack-msg-banner.heal {
     color: #00ff66;
     text-shadow: 0 0 12px #00ff66;
 }
 
-.floating-dmg-text.blocked {
+.attack-msg-banner.blocked {
     color: #00d2ff;
     text-shadow: 0 0 12px #00d2ff;
 }
 
-@keyframes float-up-fade {
-    0% { opacity: 1; transform: translate(-50%, 0) scale(0.8); }
-    50% { transform: translate(-50%, -20px) scale(1.2); }
-    100% { opacity: 0; transform: translate(-50%, -40px) scale(1); }
+@keyframes pop-msg {
+    0% { opacity: 0; transform: scale(0.6); }
+    30% { opacity: 1; transform: scale(1.1); }
+    70% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0.9); }
 }
 
 /* ==========================================================================
@@ -686,6 +686,13 @@ body {
     justify-content: center;
     align-items: center;
     z-index: 100;
+}
+
+.modal.hidden {
+    display: none !important;
+    pointer-events: none !important;
+    opacity: 0 !important;
+    z-index: -1 !important;
 }
 
 .modal-overlay {
